@@ -1,0 +1,143 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width, initial-scale=1.0">  
+<title>Dagelijkse Urenregistratie</title>  
+  
+<style>  
+body { font-family: Arial; padding:20px; }  
+table { width:100%; border-collapse: collapse; margin-top:20px; }  
+th, td { border:1px solid #ccc; padding:8px; text-align:center; }  
+button { padding:10px; margin:5px 0; width:100%; font-size:16px; }  
+input[type="time"], input[type="text"] { width:100%; padding:6px; font-size:16px; }  
+.status { margin-top:10px; font-weight:bold; }  
+</style>  
+</head>  
+<body>  
+  
+<h2>Dagelijkse Urenregistratie</h2>  
+  
+<label>Medewerker:</label>  
+<input type="text" id="naam">  
+  
+<button onclick="startTijd()">🟢 Start</button>  
+<button onclick="stopTijd()">🔴 Stop</button>  
+  
+<div class="status" id="status"></div>  
+  
+<table id="tabel">  
+<tr>  
+<th>Start</th>  
+<th>Stop</th>  
+<th>Uren</th>  
+</tr>  
+</table>  
+  
+<h3>Totaal: <span id="totaal">0.00</span> uur</h3>  
+  
+<button onclick="opslaan()">Dag Opslaan</button>  
+<button onclick="resetDag()">Reset Dag</button>  
+  
+<script>  
+  
+let actieveRij = null;  
+  
+function getHuidigeTijd() {  
+    let nu = new Date();  
+    let uren = String(nu.getHours()).padStart(2,'0');  
+    let minuten = String(nu.getMinutes()).padStart(2,'0');  
+    return uren + ":" + minuten;  
+}  
+  
+function startTijd() {  
+    if (actieveRij !== null) {  
+        document.getElementById("status").innerText = "Er loopt al een registratie.";  
+        return;  
+    }  
+  
+    let tabel = document.getElementById("tabel");  
+    actieveRij = tabel.insertRow();  
+  
+    actieveRij.insertCell(0).innerHTML =  
+        '<input type="time" value="' + getHuidigeTijd() + '" onchange="berekenAlles()">';  
+    actieveRij.insertCell(1).innerHTML =  
+        '<input type="time" onchange="berekenAlles()">';  
+    actieveRij.insertCell(2).innerHTML = "0.00";  
+  
+    document.getElementById("status").innerText = "Registratie gestart.";  
+}  
+  
+function stopTijd() {  
+    if (actieveRij === null) {  
+        document.getElementById("status").innerText = "Druk eerst op Start.";  
+        return;  
+    }  
+  
+    actieveRij.cells[1].children[0].value = getHuidigeTijd();  
+    actieveRij = null;  
+    berekenAlles();  
+  
+    document.getElementById("status").innerText = "Registratie gestopt.";  
+}  
+  
+function berekenAlles() {  
+    let tabel = document.getElementById("tabel");  
+    let totaal = 0;  
+  
+    for (let i = 1; i < tabel.rows.length; i++) {  
+        let start = tabel.rows[i].cells[0].children[0].value;  
+        let stop = tabel.rows[i].cells[1].children[0].value;  
+  
+        if (start && stop) {  
+            let s = new Date("1970-01-01T" + start + ":00");  
+            let e = new Date("1970-01-01T" + stop + ":00");  
+  
+            let diff = (e - s) / 3600000;  
+  
+            if (diff >= 0) {  
+                tabel.rows[i].cells[2].innerText = diff.toFixed(2);  
+                totaal += diff;  
+            } else {  
+                tabel.rows[i].cells[2].innerText = "0.00";  
+            }  
+        }  
+    }  
+  
+    document.getElementById("totaal").innerText = totaal.toFixed(2);  
+}  
+  
+function opslaan() {  
+    let naam = document.getElementById("naam").value;  
+    let datum = new Date().toISOString().split('T')[0];  
+    let data = "Naam,Datum,Start,Stop,Uren\n";  
+  
+    let tabel = document.getElementById("tabel");  
+  
+    for (let i = 1; i < tabel.rows.length; i++) {  
+        let start = tabel.rows[i].cells[0].children[0].value;  
+        let stop = tabel.rows[i].cells[1].children[0].value;  
+        let uren = tabel.rows[i].cells[2].innerText;  
+  
+        data += naam + "," + datum + "," + start + "," + stop + "," + uren + "\n";  
+    }  
+  
+    let blob = new Blob([data], { type: 'text/csv' });  
+    let link = document.createElement("a");  
+    link.href = URL.createObjectURL(blob);  
+    link.download = "uren_" + datum + ".csv";  
+    link.click();  
+}  
+  
+function resetDag() {  
+    document.getElementById("tabel").innerHTML =  
+        "<tr><th>Start</th><th>Stop</th><th>Uren</th></tr>";  
+    document.getElementById("totaal").innerText = "0.00";  
+    document.getElementById("status").innerText = "";  
+    actieveRij = null;  
+}  
+  
+</script>  
+  
+</body>  
+</html>  
